@@ -1,0 +1,13 @@
+{
+"type": "FeatureCollection",
+"name": "TV lounge",
+"crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" } },
+"features": [
+{ "type": "Feature", "properties": { "id": 1, "name": "TV lounge" }, "geometry": { "type": "Point", "coordinates": [ 34.604241190408338, -0.004259425150168 ] } },
+{ "type": "Feature", "properties": { "id": 2, "name": "TV lounge" }, "geometry": { "type": "Point", "coordinates": [ 34.609516339520859, -0.002381696540548 ] } },
+{ "type": "Feature", "properties": { "id": 3, "name": "TV lounge" }, "geometry": { "type": "Point", "coordinates": [ 34.607184050189851, -0.00569493913206 ] } },
+{ "type": "Feature", "properties": { "id": 4, "name": "TV lounge" }, "geometry": { "type": "Point", "coordinates": [ 34.606912436129164, -0.00638407563314 ] } },
+{ "type": "Feature", "properties": { "id": 5, "name": "TV lounge" }, "geometry": { "type": "Point", "coordinates": [ 34.596561920147145, -0.006249390974948 ] } },
+{ "type": "Feature", "properties": { "id": 6, "name": "TV lounge" }, "geometry": { "type": "Point", "coordinates": [ 34.59344845979863, -0.008220276473151 ] } }
+]
+}
