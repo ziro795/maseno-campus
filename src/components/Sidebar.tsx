@@ -136,9 +136,18 @@ export default function Sidebar({ facilities, onSelectFacility, onOpenGuide }: S
                   )}
                   {cat === 'lecture_halls' && (
                     <div className="bg-sidebar-muted rounded-md p-2.5 mb-2 space-y-2 text-xs">
-                      <input type="number" placeholder="Min Lecture Capacity" value={lectureFilters.minLectureCapacity || ''} onChange={e => setLectureFilters(p => ({ ...p, minLectureCapacity: Number(e.target.value) || 0 }))} className="w-full bg-sidebar-bg rounded px-2 py-1 text-sidebar-fg" />
-                      <input type="number" placeholder="Min Exam Capacity" value={lectureFilters.minExamCapacity || ''} onChange={e => setLectureFilters(p => ({ ...p, minExamCapacity: Number(e.target.value) || 0 }))} className="w-full bg-sidebar-bg rounded px-2 py-1 text-sidebar-fg" />
-                      <input type="number" placeholder="Min Current Seats" value={lectureFilters.minSeats || ''} onChange={e => setLectureFilters(p => ({ ...p, minSeats: Number(e.target.value) || 0 }))} className="w-full bg-sidebar-bg rounded px-2 py-1 text-sidebar-fg" />
+                      <select value={lectureFilters.minLectureCapacity || ''} onChange={e => setLectureFilters(p => ({ ...p, minLectureCapacity: Number(e.target.value) || 0 }))} className="w-full bg-sidebar-bg rounded px-2 py-1 text-sidebar-fg">
+                        <option value="">All Lecture Capacities</option>
+                        {lectureCapacities.map(v => <option key={v} value={v}>{v} seats</option>)}
+                      </select>
+                      <select value={lectureFilters.minExamCapacity || ''} onChange={e => setLectureFilters(p => ({ ...p, minExamCapacity: Number(e.target.value) || 0 }))} className="w-full bg-sidebar-bg rounded px-2 py-1 text-sidebar-fg">
+                        <option value="">All Exam Capacities</option>
+                        {examCapacities.map(v => <option key={v} value={v}>{v} seats</option>)}
+                      </select>
+                      <select value={lectureFilters.minSeats || ''} onChange={e => setLectureFilters(p => ({ ...p, minSeats: Number(e.target.value) || 0 }))} className="w-full bg-sidebar-bg rounded px-2 py-1 text-sidebar-fg">
+                        <option value="">All Current Seats</option>
+                        {currentSeats.map(v => <option key={v} value={v}>{v} seats</option>)}
+                      </select>
                     </div>
                   )}
                   {cat === 'labs' && (
