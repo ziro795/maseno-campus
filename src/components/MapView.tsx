@@ -167,12 +167,26 @@ export default function MapViewComponent({ facilities, selectedFacility, onSelec
   }, []);
 
   const locateUser = () => {
+    if (!navigator.geolocation) {
+      alert('Geolocation is not supported by your browser.');
+      return;
+    }
     navigator.geolocation.getCurrentPosition(pos => {
       const latlng: [number, number] = [pos.coords.latitude, pos.coords.longitude];
       userPosRef.current = latlng;
       if (mapRef.current) {
         mapRef.current.setView(latlng, 17);
         if (userMarkerRef.current) mapRef.current.removeLayer(userMarkerRef.current);
+        if (userCircleRef.current) mapRef.current.removeLayer(userCircleRef.current);
+
+        userCircleRef.current = L.circle(latlng, {
+          radius: pos.coords.accuracy,
+          color: '#1a73e8',
+          weight: 1,
+          fillColor: '#1a73e8',
+          fillOpacity: 0.1,
+        }).addTo(mapRef.current);
+
         userMarkerRef.current = L.marker(latlng, {
           icon: L.divIcon({
             className: '',
@@ -180,9 +194,10 @@ export default function MapViewComponent({ facilities, selectedFacility, onSelec
             iconSize: [16, 16],
             iconAnchor: [8, 8],
           })
-        }).addTo(mapRef.current).bindPopup('📍 You are here');
+        }).addTo(mapRef.current).bindPopup('📍 You are here').openPopup();
       }
-    }, () => alert('Could not get your location. Please enable GPS.'));
+    }, (error) => alert('Unable to retrieve your location: ' + error.message),
+    { enableHighAccuracy: true, timeout: 10000 });
   };
 
   const clearRouting = () => {
