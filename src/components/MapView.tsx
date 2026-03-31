@@ -1,0 +1,259 @@
+import { useEffect, useRef, useState, useCallback } from 'react';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+import 'leaflet-routing-machine';
+import type { FacilityFeature, FacilityCategory, TravelMode, MapView as MapViewType } from '@/types/facilities';
+import { Locate, Layers } from 'lucide-react';
+import RoutingPanel from './RoutingPanel';
+
+// Fix leaflet default icon
+delete (L.Icon.Default.prototype as any)._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+});
+
+const categoryColors: Record<FacilityCategory, string> = {
+  hostels: '#e03e6a',
+  administration: '#1a73e8',
+  labs: '#2d9d6a',
+  lecture_halls: '#d4a017',
+  religious_centres: '#8b5cf6',
+};
+
+const tileLayers: Record<MapViewType, { url: string; attr: string }> = {
+  street: { url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', attr: '&copy; OpenStreetMap' },
+  satellite: { url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', attr: '&copy; Esri' },
+  terrain: { url: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', attr: '&copy; OpenTopoMap' },
+};
+
+interface MapViewProps {
+  facilities: FacilityFeature[];
+  selectedFacility: FacilityFeature | null;
+  onSelectFacility: (f: FacilityFeature) => void;
+}
+
+export default function MapViewComponent({ facilities, selectedFacility, onSelectFacility }: MapViewProps) {
+  const mapRef = useRef<L.Map | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const layersRef = useRef<L.LayerGroup>(L.layerGroup());
+  const routingRef = useRef<any>(null);
+  const tileRef = useRef<L.TileLayer | null>(null);
+  const userMarkerRef = useRef<L.Marker | null>(null);
+  const userPosRef = useRef<[number, number] | null>(null);
+
+  const [mapView, setMapView] = useState<MapViewType>('street');
+  const [showLayerMenu, setShowLayerMenu] = useState(false);
+  const [routing, setRouting] = useState<{ dest: FacilityFeature; mode: TravelMode; distance: string; duration: string } | null>(null);
+
+  // Init map
+  useEffect(() => {
+    if (!containerRef.current || mapRef.current) return;
+    const map = L.map(containerRef.current, { zoomControl: true }).setView([-0.004, 34.606], 15);
+    mapRef.current = map;
+    const tile = L.tileLayer(tileLayers.street.url, { attribution: tileLayers.street.attr, maxZoom: 19 });
+    tile.addTo(map);
+    tileRef.current = tile;
+    layersRef.current.addTo(map);
+
+    return () => { map.remove(); mapRef.current = null; };
+  }, []);
+
+  // Change tile layer
+  useEffect(() => {
+    if (!mapRef.current || !tileRef.current) return;
+    tileRef.current.setUrl(tileLayers[mapView].url);
+  }, [mapView]);
+
+  // Render facilities
+  useEffect(() => {
+    const group = layersRef.current;
+    group.clearLayers();
+
+    facilities.forEach(f => {
+      const color = categoryColors[f._category];
+      const geoLayer = L.geoJSON(f.geometry, {
+        style: { color, fillColor: color, fillOpacity: 0.35, weight: 2 },
+      });
+
+      geoLayer.on('click', () => onSelectFacility(f));
+
+      const popupContent = buildPopup(f);
+      geoLayer.bindPopup(popupContent, { className: 'facility-popup' });
+
+      geoLayer.addTo(group);
+    });
+  }, [facilities, onSelectFacility]);
+
+  // Handle selected facility
+  useEffect(() => {
+    if (!selectedFacility || !mapRef.current) return;
+    mapRef.current.setView(selectedFacility._center, 18, { animate: true });
+
+    const popup = L.popup({ className: 'facility-popup' })
+      .setLatLng(selectedFacility._center)
+      .setContent(buildPopup(selectedFacility))
+      .openOn(mapRef.current);
+  }, [selectedFacility]);
+
+  function buildPopup(f: FacilityFeature): string {
+    const props = f.properties;
+    let html = `<div class="p-3"><h3 class="font-bold text-sm mb-2" style="color: ${categoryColors[f._category]}">${f._name}</h3>`;
+    html += `<p class="text-xs text-gray-500 mb-2 capitalize">${f._category.replace('_', ' ')}</p>`;
+
+    if (f._category === 'hostels') {
+      html += `<div class="space-y-1 text-xs"><p>👤 Gender: <b>${props.Gender}</b></p><p>💰 Price: <b>KES ${props.Price?.toLocaleString()}</b></p><p>🛏️ Per Room: <b>${props['Capacity Per Room']}</b></p></div>`;
+    } else if (f._category === 'lecture_halls') {
+      if (props['LECTURE CAPACITY']) html += `<p class="text-xs">📚 Lecture: <b>${props['LECTURE CAPACITY']}</b></p>`;
+      if (props['EXAMINATION CAPACITY']) html += `<p class="text-xs">📝 Exam: <b>${props['EXAMINATION CAPACITY']}</b></p>`;
+      if (props['CURRENT NUMBER OF SEATS']) html += `<p class="text-xs">💺 Seats: <b>${props['CURRENT NUMBER OF SEATS']}</b></p>`;
+    } else if (f._category === 'labs') {
+      html += `<p class="text-xs">👥 Capacity: <b>${props.CAPACITY}</b></p>`;
+    } else if (f._category === 'administration') {
+      html += `<p class="text-xs">📋 Type: <b>${props.type}</b></p>`;
+    }
+
+    html += `<button onclick="window.__navigateTo(${f._center[0]}, ${f._center[1]}, '${f._name.replace(/'/g, "\\'")}')" class="mt-3 w-full text-xs py-1.5 rounded-md" style="background: ${categoryColors[f._category]}; color: white; border: none; cursor: pointer;">🧭 Navigate here</button>`;
+    html += `</div>`;
+    return html;
+  }
+
+  // Global navigate function
+  useEffect(() => {
+    (window as any).__navigateTo = (lat: number, lng: number, name: string) => {
+      const dest = facilities.find(f => f._center[0] === lat && f._center[1] === lng);
+      if (dest) startRouting(dest, 'driving');
+    };
+    return () => { delete (window as any).__navigateTo; };
+  }, [facilities]);
+
+  const startRouting = useCallback((dest: FacilityFeature, mode: TravelMode) => {
+    if (!mapRef.current) return;
+    if (routingRef.current) {
+      mapRef.current.removeControl(routingRef.current);
+      routingRef.current = null;
+    }
+
+    const start = userPosRef.current || [-0.004, 34.606] as [number, number];
+    const profile = mode === 'driving' ? 'car' : mode === 'walking' ? 'foot' : 'bike';
+
+    const control = (L as any).Routing.control({
+      waypoints: [L.latLng(start[0], start[1]), L.latLng(dest._center[0], dest._center[1])],
+      router: (L as any).Routing.osrmv1({ serviceUrl: 'https://router.project-osrm.org/route/v1', profile }),
+      lineOptions: { styles: [{ color: categoryColors[dest._category], weight: 5, opacity: 0.8 }] },
+      show: false,
+      addWaypoints: false,
+      fitSelectedRoutes: true,
+      createMarker: () => null,
+    }).addTo(mapRef.current);
+
+    control.on('routesfound', (e: any) => {
+      const route = e.routes[0];
+      const dist = route.summary.totalDistance;
+      const time = route.summary.totalTime;
+      const speeds: Record<TravelMode, number> = { driving: 1, walking: 1, cycling: 1 };
+      
+      const distStr = dist > 1000 ? `${(dist / 1000).toFixed(1)} km` : `${Math.round(dist)} m`;
+      const mins = Math.round(time / 60);
+      const durStr = mins > 60 ? `${Math.floor(mins / 60)}h ${mins % 60}m` : `${mins} min`;
+
+      setRouting({ dest, mode, distance: distStr, duration: durStr });
+    });
+
+    routingRef.current = control;
+    setRouting({ dest, mode, distance: '...', duration: '...' });
+  }, []);
+
+  const locateUser = () => {
+    navigator.geolocation.getCurrentPosition(pos => {
+      const latlng: [number, number] = [pos.coords.latitude, pos.coords.longitude];
+      userPosRef.current = latlng;
+      if (mapRef.current) {
+        mapRef.current.setView(latlng, 17);
+        if (userMarkerRef.current) mapRef.current.removeLayer(userMarkerRef.current);
+        userMarkerRef.current = L.marker(latlng, {
+          icon: L.divIcon({
+            className: '',
+            html: `<div style="width:16px;height:16px;border-radius:50%;background:#1a73e8;border:3px solid white;box-shadow:0 0 8px rgba(0,0,0,0.3)"></div>`,
+            iconSize: [16, 16],
+            iconAnchor: [8, 8],
+          })
+        }).addTo(mapRef.current).bindPopup('📍 You are here');
+      }
+    }, () => alert('Could not get your location. Please enable GPS.'));
+  };
+
+  const clearRouting = () => {
+    if (routingRef.current && mapRef.current) {
+      mapRef.current.removeControl(routingRef.current);
+      routingRef.current = null;
+    }
+    setRouting(null);
+  };
+
+  return (
+    <div className="relative flex-1 h-full">
+      <div ref={containerRef} className="w-full h-full" />
+
+      {/* Layer switcher */}
+      <div className="absolute top-4 right-4 z-[1000]">
+        <button
+          onClick={() => setShowLayerMenu(p => !p)}
+          className="bg-card shadow-lg rounded-lg p-2.5 hover:bg-muted transition-colors"
+        >
+          <Layers className="w-5 h-5 text-foreground" />
+        </button>
+        {showLayerMenu && (
+          <div className="absolute right-0 mt-2 bg-card rounded-lg shadow-xl p-1 w-36 animate-fade-in">
+            {(['street', 'satellite', 'terrain'] as MapViewType[]).map(v => (
+              <button
+                key={v}
+                onClick={() => { setMapView(v); setShowLayerMenu(false); }}
+                className={`w-full text-left px-3 py-2 rounded-md text-xs capitalize transition-colors ${
+                  mapView === v ? 'bg-primary text-primary-foreground' : 'hover:bg-muted text-foreground'
+                }`}
+              >
+                {v === 'street' ? '🗺️ Street (OSM)' : v === 'satellite' ? '🛰️ Satellite' : '⛰️ Terrain'}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Locate button */}
+      <button
+        onClick={locateUser}
+        className="absolute bottom-8 right-4 z-[1000] bg-card shadow-lg rounded-lg p-2.5 hover:bg-muted transition-colors"
+        title="My Location"
+      >
+        <Locate className="w-5 h-5 text-primary" />
+      </button>
+
+      {/* Routing panel */}
+      {routing && (
+        <RoutingPanel
+          destination={routing.dest._name}
+          mode={routing.mode}
+          onModeChange={m => startRouting(routing.dest, m)}
+          distance={routing.distance}
+          duration={routing.duration}
+          onClose={clearRouting}
+        />
+      )}
+
+      {/* Legend */}
+      <div className="absolute bottom-8 left-4 z-[1000] bg-card/90 backdrop-blur rounded-lg shadow-lg p-3">
+        <p className="text-xs font-semibold text-foreground mb-1.5">Legend</p>
+        <div className="space-y-1">
+          {Object.entries(categoryColors).map(([cat, color]) => (
+            <div key={cat} className="flex items-center gap-2 text-xs text-foreground">
+              <span className="w-3 h-3 rounded-sm" style={{ background: color }} />
+              <span className="capitalize">{cat.replace('_', ' ')}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
