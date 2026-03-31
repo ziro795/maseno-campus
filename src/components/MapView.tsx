@@ -41,6 +41,7 @@ export default function MapViewComponent({ facilities, selectedFacility, onSelec
   const routingRef = useRef<any>(null);
   const tileRef = useRef<L.TileLayer | null>(null);
   const userMarkerRef = useRef<L.Marker | null>(null);
+  const userCircleRef = useRef<L.Circle | null>(null);
   const userPosRef = useRef<[number, number] | null>(null);
 
   const [mapView, setMapView] = useState<MapViewType>('street');
@@ -166,12 +167,26 @@ export default function MapViewComponent({ facilities, selectedFacility, onSelec
   }, []);
 
   const locateUser = () => {
+    if (!navigator.geolocation) {
+      alert('Geolocation is not supported by your browser.');
+      return;
+    }
     navigator.geolocation.getCurrentPosition(pos => {
       const latlng: [number, number] = [pos.coords.latitude, pos.coords.longitude];
       userPosRef.current = latlng;
       if (mapRef.current) {
         mapRef.current.setView(latlng, 17);
         if (userMarkerRef.current) mapRef.current.removeLayer(userMarkerRef.current);
+        if (userCircleRef.current) mapRef.current.removeLayer(userCircleRef.current);
+
+        userCircleRef.current = L.circle(latlng, {
+          radius: pos.coords.accuracy,
+          color: '#1a73e8',
+          weight: 1,
+          fillColor: '#1a73e8',
+          fillOpacity: 0.1,
+        }).addTo(mapRef.current);
+
         userMarkerRef.current = L.marker(latlng, {
           icon: L.divIcon({
             className: '',
@@ -179,9 +194,10 @@ export default function MapViewComponent({ facilities, selectedFacility, onSelec
             iconSize: [16, 16],
             iconAnchor: [8, 8],
           })
-        }).addTo(mapRef.current).bindPopup('📍 You are here');
+        }).addTo(mapRef.current).bindPopup('📍 You are here').openPopup();
       }
-    }, () => alert('Could not get your location. Please enable GPS.'));
+    }, (error) => alert('Unable to retrieve your location: ' + error.message),
+    { enableHighAccuracy: true, timeout: 10000 });
   };
 
   const clearRouting = () => {
@@ -242,18 +258,6 @@ export default function MapViewComponent({ facilities, selectedFacility, onSelec
         />
       )}
 
-      {/* Legend */}
-      <div className="absolute bottom-8 left-4 z-[1000] bg-card/90 backdrop-blur rounded-lg shadow-lg p-3">
-        <p className="text-xs font-semibold text-foreground mb-1.5">Legend</p>
-        <div className="space-y-1">
-          {Object.entries(categoryColors).map(([cat, color]) => (
-            <div key={cat} className="flex items-center gap-2 text-xs text-foreground">
-              <span className="w-3 h-3 rounded-sm" style={{ background: color }} />
-              <span className="capitalize">{cat.replace('_', ' ')}</span>
-            </div>
-          ))}
-        </div>
-      </div>
     </div>
   );
 }
