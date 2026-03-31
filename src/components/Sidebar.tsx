@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
-import { Search, Building2, GraduationCap, FlaskConical, BookOpen, Church, ChevronDown, ChevronRight, X, HelpCircle } from 'lucide-react';
-import type { FacilityFeature, FacilityCategory, HostelFilters, LectureHallFilters, LabFilters, AdminFilters } from '@/types/facilities';
+import { Search, Building2, GraduationCap, FlaskConical, BookOpen, Church, ChevronDown, ChevronRight, X, HelpCircle, Wifi, Tv, UtensilsCrossed } from 'lucide-react';
+import type { FacilityFeature, FacilityCategory, HostelFilters, LectureHallFilters, LabFilters, AdminFilters, WifiFilters } from '@/types/facilities';
+import { cafeteriaMenu } from '@/data/cafeteriaMenu';
 
 interface SidebarProps {
   facilities: FacilityFeature[];
@@ -14,6 +15,9 @@ const categoryConfig: Record<FacilityCategory, { label: string; icon: any; color
   labs: { label: 'Labs', icon: FlaskConical, colorClass: 'bg-lab' },
   lecture_halls: { label: 'Lecture Halls', icon: BookOpen, colorClass: 'bg-lecture' },
   religious_centres: { label: 'Religious Centres', icon: Church, colorClass: 'bg-religious' },
+  wifi_points: { label: 'WiFi Points', icon: Wifi, colorClass: 'bg-wifi' },
+  tv_lounge: { label: 'TV Lounges', icon: Tv, colorClass: 'bg-tvlounge' },
+  cafeteria: { label: 'Cafeteria', icon: UtensilsCrossed, colorClass: 'bg-cafeteria' },
 };
 
 export default function Sidebar({ facilities, onSelectFacility, onOpenGuide }: SidebarProps) {
@@ -23,6 +27,8 @@ export default function Sidebar({ facilities, onSelectFacility, onOpenGuide }: S
   const [lectureFilters, setLectureFilters] = useState<LectureHallFilters>({ minLectureCapacity: 0, minExamCapacity: 0, minSeats: 0 });
   const [labFilters, setLabFilters] = useState<LabFilters>({ minCapacity: 0 });
   const [adminFilters, setAdminFilters] = useState<AdminFilters>({ type: '' });
+  const [wifiFilters, setWifiFilters] = useState<WifiFilters>({ wifiName: '' });
+  const [showMenu, setShowMenu] = useState(false);
 
   const filtered = useMemo(() => {
     let f = facilities;
@@ -52,6 +58,9 @@ export default function Sidebar({ facilities, onSelectFacility, onOpenGuide }: S
     if (cat === 'administration') {
       if (adminFilters.type) items = items.filter(i => i.properties.type === adminFilters.type);
     }
+    if (cat === 'wifi_points') {
+      if (wifiFilters.wifiName) items = items.filter(i => i.properties.wifi_name === wifiFilters.wifiName);
+    }
     return items;
   };
 
@@ -73,6 +82,11 @@ export default function Sidebar({ facilities, onSelectFacility, onOpenGuide }: S
   const currentSeats = useMemo(() => {
     const vals = facilities.filter(f => f._category === 'lecture_halls').map(f => f.properties['CURRENT NUMBER OF SEATS']).filter(Boolean);
     return [...new Set(vals)].sort((a, b) => a - b);
+  }, [facilities]);
+
+  const wifiNames = useMemo(() => {
+    const names = new Set(facilities.filter(f => f._category === 'wifi_points').map(f => f.properties.wifi_name));
+    return Array.from(names).filter(Boolean);
   }, [facilities]);
 
   const toggle = (cat: FacilityCategory) => setExpandedCat(prev => prev === cat ? null : cat);
@@ -176,6 +190,48 @@ export default function Sidebar({ facilities, onSelectFacility, onOpenGuide }: S
                         <option value="">All Types</option>
                         {adminTypes.map(t => <option key={t} value={t}>{t}</option>)}
                       </select>
+                    </div>
+                  )}
+                  {cat === 'wifi_points' && (
+                    <div className="bg-sidebar-muted rounded-md p-2.5 mb-2 text-xs">
+                      <select value={wifiFilters.wifiName} onChange={e => setWifiFilters(p => ({ ...p, wifiName: e.target.value }))} className="w-full bg-sidebar-bg rounded px-2 py-1 text-sidebar-fg">
+                        <option value="">All WiFi Networks</option>
+                        {wifiNames.map(n => <option key={n} value={n}>{n}</option>)}
+                      </select>
+                    </div>
+                  )}
+
+                  {/* Cafeteria Menu Table */}
+                  {cat === 'cafeteria' && (
+                    <div className="bg-sidebar-muted rounded-md p-2.5 mb-2 text-xs">
+                      <button
+                        onClick={() => setShowMenu(p => !p)}
+                        className="w-full text-left font-medium text-sidebar-fg mb-1"
+                      >
+                        {showMenu ? '▾ Hide Menu' : '▸ View Food Menu'}
+                      </button>
+                      {showMenu && (
+                        <div className="max-h-60 overflow-y-auto sidebar-scroll mt-1">
+                          <table className="w-full text-xs">
+                            <thead>
+                              <tr className="border-b border-sidebar-bg">
+                                <th className="text-left py-1 px-1">#</th>
+                                <th className="text-left py-1 px-1">Item</th>
+                                <th className="text-right py-1 px-1">KES</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {cafeteriaMenu.map(item => (
+                                <tr key={item.code} className="border-b border-sidebar-bg/50 hover:bg-sidebar-bg/50">
+                                  <td className="py-0.5 px-1 text-muted-foreground">{item.code}</td>
+                                  <td className="py-0.5 px-1">{item.name}</td>
+                                  <td className="py-0.5 px-1 text-right font-medium">{item.price}/-</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
                     </div>
                   )}
 

@@ -5,6 +5,7 @@ import 'leaflet-routing-machine';
 import type { FacilityFeature, FacilityCategory, TravelMode, MapView as MapViewType } from '@/types/facilities';
 import { Locate, Layers } from 'lucide-react';
 import RoutingPanel from './RoutingPanel';
+import { cafeteriaMenu } from '@/data/cafeteriaMenu';
 
 // Fix leaflet default icon
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -20,6 +21,9 @@ const categoryColors: Record<FacilityCategory, string> = {
   labs: '#2d9d6a',
   lecture_halls: '#d4a017',
   religious_centres: '#8b5cf6',
+  wifi_points: '#06b6d4',
+  tv_lounge: '#f97316',
+  cafeteria: '#84cc16',
 };
 
 const tileLayers: Record<MapViewType, { url: string; attr: string }> = {
@@ -74,16 +78,27 @@ export default function MapViewComponent({ facilities, selectedFacility, onSelec
 
     facilities.forEach(f => {
       const color = categoryColors[f._category];
-      const geoLayer = L.geoJSON(f.geometry, {
-        style: { color, fillColor: color, fillOpacity: 0.35, weight: 2 },
-      });
-
-      geoLayer.on('click', () => onSelectFacility(f));
-
-      const popupContent = buildPopup(f);
-      geoLayer.bindPopup(popupContent, { className: 'facility-popup' });
-
-      geoLayer.addTo(group);
+      
+      if (f.geometry.type === 'Point') {
+        // Render point features as circle markers
+        const marker = L.circleMarker([f._center[0], f._center[1]], {
+          radius: 8,
+          color: color,
+          fillColor: color,
+          fillOpacity: 0.7,
+          weight: 2,
+        });
+        marker.on('click', () => onSelectFacility(f));
+        marker.bindPopup(buildPopup(f), { className: 'facility-popup', maxWidth: 350 });
+        marker.addTo(group);
+      } else {
+        const geoLayer = L.geoJSON(f.geometry, {
+          style: { color, fillColor: color, fillOpacity: 0.35, weight: 2 },
+        });
+        geoLayer.on('click', () => onSelectFacility(f));
+        geoLayer.bindPopup(buildPopup(f), { className: 'facility-popup', maxWidth: 350 });
+        geoLayer.addTo(group);
+      }
     });
   }, [facilities, onSelectFacility]);
 
@@ -92,7 +107,7 @@ export default function MapViewComponent({ facilities, selectedFacility, onSelec
     if (!selectedFacility || !mapRef.current) return;
     mapRef.current.setView(selectedFacility._center, 18, { animate: true });
 
-    const popup = L.popup({ className: 'facility-popup' })
+    const popup = L.popup({ className: 'facility-popup', maxWidth: 350 })
       .setLatLng(selectedFacility._center)
       .setContent(buildPopup(selectedFacility))
       .openOn(mapRef.current);
@@ -101,7 +116,7 @@ export default function MapViewComponent({ facilities, selectedFacility, onSelec
   function buildPopup(f: FacilityFeature): string {
     const props = f.properties;
     let html = `<div class="p-3"><h3 class="font-bold text-sm mb-2" style="color: ${categoryColors[f._category]}">${f._name}</h3>`;
-    html += `<p class="text-xs text-gray-500 mb-2 capitalize">${f._category.replace('_', ' ')}</p>`;
+    html += `<p class="text-xs text-gray-500 mb-2 capitalize">${f._category.replace(/_/g, ' ')}</p>`;
 
     if (f._category === 'hostels') {
       html += `<div class="space-y-1 text-xs"><p>👤 Gender: <b>${props.Gender}</b></p><p>💰 Price: <b>KES ${props.Price?.toLocaleString()}</b></p><p>🛏️ Per Room: <b>${props['Capacity Per Room']}</b></p></div>`;
@@ -113,6 +128,17 @@ export default function MapViewComponent({ facilities, selectedFacility, onSelec
       html += `<p class="text-xs">👥 Capacity: <b>${props.CAPACITY}</b></p>`;
     } else if (f._category === 'administration') {
       html += `<p class="text-xs">📋 Type: <b>${props.type}</b></p>`;
+    } else if (f._category === 'wifi_points') {
+      html += `<p class="text-xs">📶 Network: <b>${props.wifi_name}</b></p>`;
+      html += `<p class="text-xs">🔑 Password: <b>${props.PASSWORD}</b></p>`;
+    } else if (f._category === 'tv_lounge') {
+      html += `<p class="text-xs">📺 TV Lounge</p>`;
+    } else if (f._category === 'cafeteria') {
+      html += `<div class="text-xs max-h-48 overflow-y-auto"><table class="w-full"><thead><tr style="border-bottom:1px solid #ddd"><th class="text-left py-0.5 px-1">#</th><th class="text-left py-0.5 px-1">Item</th><th class="text-right py-0.5 px-1">KES</th></tr></thead><tbody>`;
+      cafeteriaMenu.forEach(item => {
+        html += `<tr style="border-bottom:1px solid #eee"><td class="py-0.5 px-1" style="color:#888">${item.code}</td><td class="py-0.5 px-1">${item.name}</td><td class="py-0.5 px-1 text-right" style="font-weight:600">${item.price}/-</td></tr>`;
+      });
+      html += `</tbody></table></div>`;
     }
 
     html += `<button onclick="window.__navigateTo(${f._center[0]}, ${f._center[1]}, '${f._name.replace(/'/g, "\\'")}')" class="mt-3 w-full text-xs py-1.5 rounded-md" style="background: ${categoryColors[f._category]}; color: white; border: none; cursor: pointer;">🧭 Navigate here</button>`;
@@ -153,8 +179,7 @@ export default function MapViewComponent({ facilities, selectedFacility, onSelec
       const route = e.routes[0];
       const dist = route.summary.totalDistance;
       const time = route.summary.totalTime;
-      const speeds: Record<TravelMode, number> = { driving: 1, walking: 1, cycling: 1 };
-      
+
       const distStr = dist > 1000 ? `${(dist / 1000).toFixed(1)} km` : `${Math.round(dist)} m`;
       const mins = Math.round(time / 60);
       const durStr = mins > 60 ? `${Math.floor(mins / 60)}h ${mins % 60}m` : `${mins} min`;
@@ -257,7 +282,6 @@ export default function MapViewComponent({ facilities, selectedFacility, onSelec
           onClose={clearRouting}
         />
       )}
-
     </div>
   );
 }
