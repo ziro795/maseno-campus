@@ -84,3 +84,7 @@
   background: hsl(var(--sidebar-muted));
   border-radius: 2px;
 }
+
+.leaflet-routing-container {
+  display: none !important;
+}
