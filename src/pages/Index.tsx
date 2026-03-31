@@ -1,16 +1,33 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import { useState, useCallback } from 'react';
+import Sidebar from '@/components/Sidebar';
+import MapViewComponent from '@/components/MapView';
+import UserGuide from '@/components/UserGuide';
+import { useGeoData } from '@/hooks/useGeoData';
+import type { FacilityFeature } from '@/types/facilities';
 
-// IMPORTANT: Fully REPLACE this with your own code
-const PlaceholderIndex = () => {
-  // PLACEHOLDER: Replace this entire return statement with the user's app.
-  // The inline background color is intentionally not part of the design system.
+export default function Index() {
+  const { facilities, loading } = useGeoData();
+  const [selected, setSelected] = useState<FacilityFeature | null>(null);
+  const [guideOpen, setGuideOpen] = useState(false);
+
+  const handleSelect = useCallback((f: FacilityFeature) => setSelected(f), []);
+
+  if (loading) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-background">
+        <div className="text-center animate-fade-in">
+          <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-muted-foreground text-sm">Loading campus data...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="flex min-h-screen items-center justify-center" style={{ backgroundColor: '#fcfbf8' }}>
-      <img data-lovable-blank-page-placeholder="REMOVE_THIS" src="/placeholder.svg" alt="Your app will live here!" />
+    <div className="h-screen flex overflow-hidden">
+      <Sidebar facilities={facilities} onSelectFacility={handleSelect} onOpenGuide={() => setGuideOpen(true)} />
+      <MapViewComponent facilities={facilities} selectedFacility={selected} onSelectFacility={handleSelect} />
+      <UserGuide open={guideOpen} onClose={() => setGuideOpen(false)} />
     </div>
   );
-};
-
-const Index = PlaceholderIndex;
-
-export default Index;
+}
