@@ -41,6 +41,7 @@ export default function MapViewComponent({ facilities, selectedFacility, onSelec
   const routingRef = useRef<any>(null);
   const tileRef = useRef<L.TileLayer | null>(null);
   const userMarkerRef = useRef<L.Marker | null>(null);
+  const userCircleRef = useRef<L.Circle | null>(null);
   const userPosRef = useRef<[number, number] | null>(null);
 
   const [mapView, setMapView] = useState<MapViewType>('street');
