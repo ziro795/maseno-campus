@@ -56,6 +56,9 @@ export default {
         lab: "hsl(var(--lab-color))",
         lecture: "hsl(var(--lecture-color))",
         religious: "hsl(var(--religious-color))",
+        wifi: "hsl(var(--wifi-color))",
+        tvlounge: "hsl(var(--tvlounge-color))",
+        cafeteria: "hsl(var(--cafeteria-color))",
       },
       borderRadius: {
         lg: "var(--radius)",

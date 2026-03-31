@@ -1,0 +1,48 @@
+export interface MenuItem {
+  code: number;
+  name: string;
+  price: number;
+}
+
+export const cafeteriaMenu: MenuItem[] = [
+  { code: 1, name: 'Ugali Beef Veges', price: 70 },
+  { code: 2, name: 'Rice Beef Veges', price: 70 },
+  { code: 3, name: 'Chapo Beef Veges', price: 70 },
+  { code: 4, name: 'Ugali Beef', price: 60 },
+  { code: 5, name: 'Rice Beef', price: 60 },
+  { code: 6, name: 'Chapo Beef', price: 60 },
+  { code: 7, name: 'Beef Plain', price: 50 },
+  { code: 8, name: 'Ugali Beans', price: 30 },
+  { code: 9, name: 'Rice Beans', price: 30 },
+  { code: 10, name: 'Chapo Beans', price: 30 },
+  { code: 11, name: 'Beans Plain', price: 20 },
+  { code: 12, name: 'Ugali Ndengu', price: 40 },
+  { code: 13, name: 'Rice Ndengu', price: 40 },
+  { code: 14, name: 'Chapo Ndengu', price: 40 },
+  { code: 15, name: 'Ndengu Plain', price: 20 },
+  { code: 16, name: 'Ugali Veges', price: 30 },
+  { code: 17, name: 'Rice Veges', price: 30 },
+  { code: 18, name: 'Chapo Veges', price: 30 },
+  { code: 19, name: 'Veges Plain', price: 20 },
+  { code: 20, name: 'Ugali Plain', price: 20 },
+  { code: 21, name: 'Rice Plain', price: 20 },
+  { code: 22, name: 'Chapo Plain', price: 20 },
+  { code: 23, name: 'Mandazi', price: 10 },
+  { code: 24, name: 'White Tea', price: 20 },
+  { code: 25, name: 'Black Tea', price: 20 },
+  { code: 26, name: 'Ugali Matumbo Veges', price: 50 },
+  { code: 27, name: 'Rice Matumbo Veges', price: 50 },
+  { code: 28, name: 'Chapo Matumbo', price: 50 },
+  { code: 29, name: 'Ugali Eggstew Veges', price: 40 },
+  { code: 30, name: 'Rice Eggstew Veges', price: 40 },
+  { code: 31, name: 'Chapo Eggstew Veges', price: 40 },
+  { code: 32, name: 'Eggstew Veges', price: 30 },
+  { code: 33, name: 'Gravy', price: 10 },
+  { code: 34, name: 'Ugali Kunde', price: 50 },
+  { code: 35, name: 'Boiled Egg', price: 20 },
+  { code: 36, name: 'Porridge', price: 20 },
+  { code: 37, name: 'Ugali Chicken Veges', price: 100 },
+  { code: 38, name: 'Rice Chicken Veges', price: 100 },
+  { code: 39, name: 'Chapo Chicken Veges', price: 100 },
+  { code: 40, name: 'Ugali Omena Veges', price: 40 },
+];

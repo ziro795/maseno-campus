@@ -1,4 +1,4 @@
-export type FacilityCategory = 'hostels' | 'administration' | 'labs' | 'lecture_halls' | 'religious_centres';
+export type FacilityCategory = 'hostels' | 'administration' | 'labs' | 'lecture_halls' | 'religious_centres' | 'wifi_points' | 'tv_lounge' | 'cafeteria';
 
 export interface FacilityFeature {
   type: 'Feature';
@@ -28,6 +28,10 @@ export interface LabFilters {
 
 export interface AdminFilters {
   type: string;
+}
+
+export interface WifiFilters {
+  wifiName: string;
 }
 
 export type TravelMode = 'driving' | 'walking' | 'cycling';
