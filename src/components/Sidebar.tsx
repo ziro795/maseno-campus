@@ -60,6 +60,21 @@ export default function Sidebar({ facilities, onSelectFacility, onOpenGuide }: S
     return Array.from(types).filter(Boolean);
   }, [facilities]);
 
+  const lectureCapacities = useMemo(() => {
+    const vals = facilities.filter(f => f._category === 'lecture_halls').map(f => f.properties['LECTURE CAPACITY']).filter(Boolean);
+    return [...new Set(vals)].sort((a, b) => a - b);
+  }, [facilities]);
+
+  const examCapacities = useMemo(() => {
+    const vals = facilities.filter(f => f._category === 'lecture_halls').map(f => f.properties['EXAMINATION CAPACITY']).filter(Boolean);
+    return [...new Set(vals)].sort((a, b) => a - b);
+  }, [facilities]);
+
+  const currentSeats = useMemo(() => {
+    const vals = facilities.filter(f => f._category === 'lecture_halls').map(f => f.properties['CURRENT NUMBER OF SEATS']).filter(Boolean);
+    return [...new Set(vals)].sort((a, b) => a - b);
+  }, [facilities]);
+
   const toggle = (cat: FacilityCategory) => setExpandedCat(prev => prev === cat ? null : cat);
 
   return (

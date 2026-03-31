@@ -258,18 +258,6 @@ export default function MapViewComponent({ facilities, selectedFacility, onSelec
         />
       )}
 
-      {/* Legend */}
-      <div className="absolute bottom-8 left-4 z-[1000] bg-card/90 backdrop-blur rounded-lg shadow-lg p-3">
-        <p className="text-xs font-semibold text-foreground mb-1.5">Legend</p>
-        <div className="space-y-1">
-          {Object.entries(categoryColors).map(([cat, color]) => (
-            <div key={cat} className="flex items-center gap-2 text-xs text-foreground">
-              <span className="w-3 h-3 rounded-sm" style={{ background: color }} />
-              <span className="capitalize">{cat.replace('_', ' ')}</span>
-            </div>
-          ))}
-        </div>
-      </div>
     </div>
   );
 }
