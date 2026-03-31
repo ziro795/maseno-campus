@@ -6,6 +6,7 @@ import type { FacilityFeature, FacilityCategory, TravelMode, MapView as MapViewT
 import { Locate, Layers } from 'lucide-react';
 import RoutingPanel from './RoutingPanel';
 import { cafeteriaMenu } from '@/data/cafeteriaMenu';
+import { buildingRooms } from '@/data/lectureRooms';
 
 // Fix leaflet default icon
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -31,6 +32,10 @@ const tileLayers: Record<MapViewType, { url: string; attr: string }> = {
   satellite: { url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', attr: '&copy; Esri' },
   terrain: { url: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', attr: '&copy; OpenTopoMap' },
 };
+
+const wifiIconSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h.01"/><path d="M2 8.82a15 15 0 0 1 20 0"/><path d="M5 12.859a10 10 0 0 1 14 0"/><path d="M8.5 16.429a5 5 0 0 1 7 0"/></svg>`;
+
+const tvIconSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="15" x="2" y="7" rx="2" ry="2"/><polyline points="17 2 12 7 7 2"/></svg>`;
 
 interface MapViewProps {
   facilities: FacilityFeature[];
@@ -71,22 +76,43 @@ export default function MapViewComponent({ facilities, selectedFacility, onSelec
     tileRef.current.setUrl(tileLayers[mapView].url);
   }, [mapView]);
 
-  // Render facilities
+  // Render facilities (skip room sub-features — they share parent geometry)
   useEffect(() => {
     const group = layersRef.current;
     group.clearLayers();
 
-    facilities.forEach(f => {
+    const renderedFacilities = facilities.filter(f => !f._isRoom);
+
+    renderedFacilities.forEach(f => {
       const color = categoryColors[f._category];
-      
-      if (f.geometry.type === 'Point') {
-        // Render point features as circle markers
+
+      if (f._category === 'wifi_points') {
+        const marker = L.marker([f._center[0], f._center[1]], {
+          icon: L.divIcon({
+            className: '',
+            html: `<div style="width:32px;height:32px;border-radius:50%;background:${color};display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,0.3)">${wifiIconSvg}</div>`,
+            iconSize: [32, 32],
+            iconAnchor: [16, 16],
+          })
+        });
+        marker.on('click', () => onSelectFacility(f));
+        marker.bindPopup(buildPopup(f), { className: 'facility-popup', maxWidth: 350 });
+        marker.addTo(group);
+      } else if (f._category === 'tv_lounge') {
+        const marker = L.marker([f._center[0], f._center[1]], {
+          icon: L.divIcon({
+            className: '',
+            html: `<div style="width:32px;height:32px;border-radius:50%;background:${color};display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,0.3)">${tvIconSvg}</div>`,
+            iconSize: [32, 32],
+            iconAnchor: [16, 16],
+          })
+        });
+        marker.on('click', () => onSelectFacility(f));
+        marker.bindPopup(buildPopup(f), { className: 'facility-popup', maxWidth: 350 });
+        marker.addTo(group);
+      } else if (f.geometry.type === 'Point') {
         const marker = L.circleMarker([f._center[0], f._center[1]], {
-          radius: 8,
-          color: color,
-          fillColor: color,
-          fillOpacity: 0.7,
-          weight: 2,
+          radius: 8, color, fillColor: color, fillOpacity: 0.7, weight: 2,
         });
         marker.on('click', () => onSelectFacility(f));
         marker.bindPopup(buildPopup(f), { className: 'facility-popup', maxWidth: 350 });
@@ -107,7 +133,7 @@ export default function MapViewComponent({ facilities, selectedFacility, onSelec
     if (!selectedFacility || !mapRef.current) return;
     mapRef.current.setView(selectedFacility._center, 18, { animate: true });
 
-    const popup = L.popup({ className: 'facility-popup', maxWidth: 350 })
+    L.popup({ className: 'facility-popup', maxWidth: 350 })
       .setLatLng(selectedFacility._center)
       .setContent(buildPopup(selectedFacility))
       .openOn(mapRef.current);
@@ -121,9 +147,30 @@ export default function MapViewComponent({ facilities, selectedFacility, onSelec
     if (f._category === 'hostels') {
       html += `<div class="space-y-1 text-xs"><p>👤 Gender: <b>${props.Gender}</b></p><p>💰 Price: <b>KES ${props.Price?.toLocaleString()}</b></p><p>🛏️ Per Room: <b>${props['Capacity Per Room']}</b></p></div>`;
     } else if (f._category === 'lecture_halls') {
-      if (props['LECTURE CAPACITY']) html += `<p class="text-xs">📚 Lecture: <b>${props['LECTURE CAPACITY']}</b></p>`;
-      if (props['EXAMINATION CAPACITY']) html += `<p class="text-xs">📝 Exam: <b>${props['EXAMINATION CAPACITY']}</b></p>`;
-      if (props['CURRENT NUMBER OF SEATS']) html += `<p class="text-xs">💺 Seats: <b>${props['CURRENT NUMBER OF SEATS']}</b></p>`;
+      // Check if this building has rooms attached
+      const buildingName = (props.Name || '').trim().toUpperCase();
+      const matchKey = Object.keys(buildingRooms).find(k => buildingName.includes(k));
+      
+      if (f._isRoom) {
+        // Show individual room details
+        html += `<p class="text-xs">🏢 Building: <b>${f._parentBuilding}</b></p>`;
+        html += `<p class="text-xs">🏗️ Floor: <b>${props.floor_number}</b></p>`;
+        if (props['LECTURE CAPACITY']) html += `<p class="text-xs">📚 Lecture: <b>${props['LECTURE CAPACITY']}</b></p>`;
+        if (props['EXAMINATION CAPACITY']) html += `<p class="text-xs">📝 Exam: <b>${props['EXAMINATION CAPACITY']}</b></p>`;
+        if (props['CURRENT NUMBER OF SEATS']) html += `<p class="text-xs">💺 Seats: <b>${props['CURRENT NUMBER OF SEATS']}</b></p>`;
+      } else if (matchKey) {
+        // Show rooms table for buildings with room data
+        const rooms = buildingRooms[matchKey];
+        html += `<div class="text-xs max-h-48 overflow-y-auto"><table class="w-full"><thead><tr style="border-bottom:1px solid #ddd"><th class="text-left py-0.5 px-1">Room</th><th class="text-right py-0.5 px-1">Floor</th><th class="text-right py-0.5 px-1">Lec.</th><th class="text-right py-0.5 px-1">Exam</th><th class="text-right py-0.5 px-1">Seats</th></tr></thead><tbody>`;
+        rooms.forEach(room => {
+          html += `<tr style="border-bottom:1px solid #eee"><td class="py-0.5 px-1">${room.name}</td><td class="py-0.5 px-1 text-right">${room.floorNumber}</td><td class="py-0.5 px-1 text-right">${room.lectureCapacity ?? '-'}</td><td class="py-0.5 px-1 text-right">${room.examCapacity ?? '-'}</td><td class="py-0.5 px-1 text-right">${room.currentSeats ?? '-'}</td></tr>`;
+        });
+        html += `</tbody></table></div>`;
+      } else {
+        if (props['LECTURE CAPACITY']) html += `<p class="text-xs">📚 Lecture: <b>${props['LECTURE CAPACITY']}</b></p>`;
+        if (props['EXAMINATION CAPACITY']) html += `<p class="text-xs">📝 Exam: <b>${props['EXAMINATION CAPACITY']}</b></p>`;
+        if (props['CURRENT NUMBER OF SEATS']) html += `<p class="text-xs">💺 Seats: <b>${props['CURRENT NUMBER OF SEATS']}</b></p>`;
+      }
     } else if (f._category === 'labs') {
       html += `<p class="text-xs">👥 Capacity: <b>${props.CAPACITY}</b></p>`;
     } else if (f._category === 'administration') {
@@ -168,10 +215,12 @@ export default function MapViewComponent({ facilities, selectedFacility, onSelec
     const control = (L as any).Routing.control({
       waypoints: [L.latLng(start[0], start[1]), L.latLng(dest._center[0], dest._center[1])],
       router: (L as any).Routing.osrmv1({ serviceUrl: 'https://router.project-osrm.org/route/v1', profile }),
-      lineOptions: { styles: [{ color: categoryColors[dest._category], weight: 5, opacity: 0.8 }] },
+      lineOptions: { styles: [{ color: categoryColors[dest._category], weight: 6, opacity: 0.8 }] },
       show: false,
       addWaypoints: false,
+      routeWhileDragging: false,
       fitSelectedRoutes: true,
+      showAlternatives: false,
       createMarker: () => null,
     }).addTo(mapRef.current);
 
@@ -179,11 +228,9 @@ export default function MapViewComponent({ facilities, selectedFacility, onSelec
       const route = e.routes[0];
       const dist = route.summary.totalDistance;
       const time = route.summary.totalTime;
-
-      const distStr = dist > 1000 ? `${(dist / 1000).toFixed(1)} km` : `${Math.round(dist)} m`;
+      const distStr = dist > 1000 ? `${(dist / 1000).toFixed(2)} km` : `${Math.round(dist)} m`;
       const mins = Math.round(time / 60);
       const durStr = mins > 60 ? `${Math.floor(mins / 60)}h ${mins % 60}m` : `${mins} min`;
-
       setRouting({ dest, mode, distance: distStr, duration: durStr });
     });
 
@@ -206,18 +253,18 @@ export default function MapViewComponent({ facilities, selectedFacility, onSelec
 
         userCircleRef.current = L.circle(latlng, {
           radius: pos.coords.accuracy,
-          color: '#1a73e8',
+          color: '#2c3e50',
           weight: 1,
-          fillColor: '#1a73e8',
+          fillColor: '#2c3e50',
           fillOpacity: 0.1,
         }).addTo(mapRef.current);
 
         userMarkerRef.current = L.marker(latlng, {
           icon: L.divIcon({
-            className: '',
-            html: `<div style="width:16px;height:16px;border-radius:50%;background:#1a73e8;border:3px solid white;box-shadow:0 0 8px rgba(0,0,0,0.3)"></div>`,
-            iconSize: [16, 16],
-            iconAnchor: [8, 8],
+            className: 'user-location-marker',
+            html: `<div style="width:16px;height:16px;border-radius:50%;background:#2c3e50;border:3px solid white;box-shadow:0 0 8px rgba(0,0,0,0.3)"></div>`,
+            iconSize: [22, 22],
+            iconAnchor: [11, 11],
           })
         }).addTo(mapRef.current).bindPopup('📍 You are here').openPopup();
       }

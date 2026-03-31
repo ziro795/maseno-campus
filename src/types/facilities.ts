@@ -1,3 +1,5 @@
+import type { LectureRoom } from '@/data/lectureRooms';
+
 export type FacilityCategory = 'hostels' | 'administration' | 'labs' | 'lecture_halls' | 'religious_centres' | 'wifi_points' | 'tv_lounge' | 'cafeteria';
 
 export interface FacilityFeature {
@@ -7,6 +9,9 @@ export interface FacilityFeature {
   _category: FacilityCategory;
   _center: [number, number]; // [lat, lng]
   _name: string;
+  _rooms?: LectureRoom[];
+  _parentBuilding?: string;
+  _isRoom?: boolean;
 }
 
 export interface HostelFilters {

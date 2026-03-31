@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import type { FacilityFeature, FacilityCategory } from '@/types/facilities';
+import { buildingRooms } from '@/data/lectureRooms';
 
 function getCenter(geometry: any): [number, number] {
   if (!geometry) return [0, 0];
@@ -8,7 +9,6 @@ function getCenter(geometry: any): [number, number] {
     return [geometry.coordinates[1], geometry.coordinates[0]];
   }
   
-  // For MultiPolygon / Polygon
   const coords = geometry.type === 'MultiPolygon' 
     ? geometry.coordinates[0][0] 
     : geometry.coordinates[0];
@@ -45,14 +45,51 @@ export function useGeoData() {
     ];
 
     Promise.all(files.map(f => fetch(f.path).then(r => r.json()).then(data => {
-      return data.features
+      const features: FacilityFeature[] = [];
+      
+      data.features
         .filter((feat: any) => feat.geometry !== null)
-        .map((feat: any) => ({
-          ...feat,
-          _category: f.category,
-          _center: getCenter(feat.geometry),
-          _name: getName(feat.properties, f.category),
-        }));
+        .forEach((feat: any) => {
+          const baseFacility: FacilityFeature = {
+            ...feat,
+            _category: f.category,
+            _center: getCenter(feat.geometry),
+            _name: getName(feat.properties, f.category),
+          };
+          features.push(baseFacility);
+
+          // For lecture halls with room data (NL and PGM), create sub-features
+          if (f.category === 'lecture_halls') {
+            const buildingName = (feat.properties.Name || '').trim().toUpperCase();
+            const matchKey = Object.keys(buildingRooms).find(k => buildingName.includes(k));
+            if (matchKey) {
+              const rooms = buildingRooms[matchKey];
+              // Attach rooms to the parent feature
+              baseFacility._rooms = rooms;
+              // Create searchable sub-features for each room
+              rooms.forEach(room => {
+                features.push({
+                  ...feat,
+                  _category: f.category,
+                  _center: getCenter(feat.geometry),
+                  _name: room.name,
+                  _parentBuilding: baseFacility._name,
+                  _isRoom: true,
+                  properties: {
+                    ...feat.properties,
+                    'LECTURE CAPACITY': room.lectureCapacity,
+                    'EXAMINATION CAPACITY': room.examCapacity,
+                    'CURRENT NUMBER OF SEATS': room.currentSeats,
+                    'LECTURE ROOM NAME': room.name,
+                    'floor_number': room.floorNumber,
+                  },
+                } as FacilityFeature);
+              });
+            }
+          }
+        });
+      
+      return features;
     }))).then(results => {
       setFacilities(results.flat());
       setLoading(false);

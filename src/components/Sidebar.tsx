@@ -36,6 +36,10 @@ export default function Sidebar({ facilities, onSelectFacility, onOpenGuide }: S
       const s = search.toLowerCase();
       f = f.filter(x => x._name.toLowerCase().includes(s));
     }
+    // When not searching, hide room sub-features from the main list
+    if (!search) {
+      f = f.filter(x => !x._isRoom);
+    }
     return f;
   }, [facilities, search]);
 
