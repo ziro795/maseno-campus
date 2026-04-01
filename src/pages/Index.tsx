@@ -9,6 +9,7 @@ export default function Index() {
   const { facilities, loading } = useGeoData();
   const [selected, setSelected] = useState<FacilityFeature | null>(null);
   const [guideOpen, setGuideOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   const handleSelect = useCallback((f: FacilityFeature) => setSelected(f), []);
 

@@ -22,7 +22,7 @@ const categoryConfig: Record<FacilityCategory, { label: string; icon: any; color
   cafeteria: { label: 'Cafeteria', icon: UtensilsCrossed, colorClass: 'bg-cafeteria' },
 };
 
-export default function Sidebar({ facilities, onSelectFacility, onOpenGuide }: SidebarProps) {
+export default function Sidebar({ facilities, onSelectFacility, onOpenGuide, collapsed, onToggleCollapse }: SidebarProps) {
   const [search, setSearch] = useState('');
   const [expandedCat, setExpandedCat] = useState<FacilityCategory | null>(null);
   const [hostelFilters, setHostelFilters] = useState<HostelFilters>({ gender: '', minPrice: 0, maxPrice: 100000, capacityPerRoom: null });
@@ -31,6 +31,7 @@ export default function Sidebar({ facilities, onSelectFacility, onOpenGuide }: S
   const [adminFilters, setAdminFilters] = useState<AdminFilters>({ type: '' });
   const [wifiFilters, setWifiFilters] = useState<WifiFilters>({ wifiName: '' });
   const [showMenu, setShowMenu] = useState(false);
+  const [menuSearch, setMenuSearch] = useState('');
 
   const filtered = useMemo(() => {
     let f = facilities;
