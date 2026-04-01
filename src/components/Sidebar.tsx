@@ -252,25 +252,45 @@ export default function Sidebar({ facilities, onSelectFacility, onOpenGuide, col
                         {showMenu ? '▾ Hide Menu' : '▸ View Food Menu'}
                       </button>
                       {showMenu && (
-                        <div className="max-h-60 overflow-y-auto sidebar-scroll mt-1">
-                          <table className="w-full text-xs">
-                            <thead>
-                              <tr className="border-b border-sidebar-bg">
-                                <th className="text-left py-1 px-1">#</th>
-                                <th className="text-left py-1 px-1">Item</th>
-                                <th className="text-right py-1 px-1">KES</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {cafeteriaMenu.map(item => (
-                                <tr key={item.code} className="border-b border-sidebar-bg/50 hover:bg-sidebar-bg/50">
-                                  <td className="py-0.5 px-1 text-muted-foreground">{item.code}</td>
-                                  <td className="py-0.5 px-1">{item.name}</td>
-                                  <td className="py-0.5 px-1 text-right font-medium">{item.price}/-</td>
+                        <div className="mt-1">
+                          <div className="relative mb-2">
+                            <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground" />
+                            <input
+                              type="text"
+                              placeholder="Search meal..."
+                              value={menuSearch}
+                              onChange={e => setMenuSearch(e.target.value)}
+                              className="w-full pl-7 pr-6 py-1 rounded bg-sidebar-bg text-sidebar-fg placeholder:text-muted-foreground text-xs outline-none focus:ring-1 focus:ring-sidebar-accent"
+                            />
+                            {menuSearch && (
+                              <button onClick={() => setMenuSearch('')} className="absolute right-1.5 top-1/2 -translate-y-1/2">
+                                <X className="w-3 h-3 text-muted-foreground" />
+                              </button>
+                            )}
+                          </div>
+                          <div className="max-h-60 overflow-y-auto sidebar-scroll">
+                            <table className="w-full text-xs">
+                              <thead>
+                                <tr className="border-b border-sidebar-bg">
+                                  <th className="text-left py-1 px-1">#</th>
+                                  <th className="text-left py-1 px-1">Item</th>
+                                  <th className="text-right py-1 px-1">KES</th>
                                 </tr>
-                              ))}
-                            </tbody>
-                          </table>
+                              </thead>
+                              <tbody>
+                                {filteredMenu.map(item => (
+                                  <tr key={item.code} className="border-b border-sidebar-bg/50 hover:bg-sidebar-bg/50">
+                                    <td className="py-0.5 px-1 text-muted-foreground">{item.code}</td>
+                                    <td className="py-0.5 px-1">{item.name}</td>
+                                    <td className="py-0.5 px-1 text-right font-medium">{item.price}/-</td>
+                                  </tr>
+                                ))}
+                                {filteredMenu.length === 0 && (
+                                  <tr><td colSpan={3} className="py-2 text-center text-muted-foreground">No meals found</td></tr>
+                                )}
+                              </tbody>
+                            </table>
+                          </div>
                         </div>
                       )}
                     </div>
