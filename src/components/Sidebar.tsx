@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Search, Building2, GraduationCap, FlaskConical, BookOpen, Church, ChevronDown, ChevronRight, X, HelpCircle, Wifi, Tv, UtensilsCrossed } from 'lucide-react';
+import { Search, Building2, GraduationCap, FlaskConical, BookOpen, Church, ChevronDown, ChevronRight, X, HelpCircle, Wifi, Tv, UtensilsCrossed, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import type { FacilityFeature, FacilityCategory, HostelFilters, LectureHallFilters, LabFilters, AdminFilters, WifiFilters } from '@/types/facilities';
 import { cafeteriaMenu } from '@/data/cafeteriaMenu';
 
