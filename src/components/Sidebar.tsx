@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Search, Building2, GraduationCap, FlaskConical, BookOpen, Church, ChevronDown, ChevronRight, X, HelpCircle, Wifi, Tv, UtensilsCrossed } from 'lucide-react';
+import { Search, Building2, GraduationCap, FlaskConical, BookOpen, Church, ChevronDown, ChevronRight, X, HelpCircle, Wifi, Tv, UtensilsCrossed, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import type { FacilityFeature, FacilityCategory, HostelFilters, LectureHallFilters, LabFilters, AdminFilters, WifiFilters } from '@/types/facilities';
 import { cafeteriaMenu } from '@/data/cafeteriaMenu';
 
@@ -7,6 +7,8 @@ interface SidebarProps {
   facilities: FacilityFeature[];
   onSelectFacility: (f: FacilityFeature) => void;
   onOpenGuide: () => void;
+  collapsed: boolean;
+  onToggleCollapse: () => void;
 }
 
 const categoryConfig: Record<FacilityCategory, { label: string; icon: any; colorClass: string }> = {
@@ -20,7 +22,7 @@ const categoryConfig: Record<FacilityCategory, { label: string; icon: any; color
   cafeteria: { label: 'Cafeteria', icon: UtensilsCrossed, colorClass: 'bg-cafeteria' },
 };
 
-export default function Sidebar({ facilities, onSelectFacility, onOpenGuide }: SidebarProps) {
+export default function Sidebar({ facilities, onSelectFacility, onOpenGuide, collapsed, onToggleCollapse }: SidebarProps) {
   const [search, setSearch] = useState('');
   const [expandedCat, setExpandedCat] = useState<FacilityCategory | null>(null);
   const [hostelFilters, setHostelFilters] = useState<HostelFilters>({ gender: '', minPrice: 0, maxPrice: 100000, capacityPerRoom: null });
@@ -29,6 +31,7 @@ export default function Sidebar({ facilities, onSelectFacility, onOpenGuide }: S
   const [adminFilters, setAdminFilters] = useState<AdminFilters>({ type: '' });
   const [wifiFilters, setWifiFilters] = useState<WifiFilters>({ wifiName: '' });
   const [showMenu, setShowMenu] = useState(false);
+  const [menuSearch, setMenuSearch] = useState('');
 
   const filtered = useMemo(() => {
     let f = facilities;
@@ -95,15 +98,49 @@ export default function Sidebar({ facilities, onSelectFacility, onOpenGuide }: S
 
   const toggle = (cat: FacilityCategory) => setExpandedCat(prev => prev === cat ? null : cat);
 
+  const filteredMenu = useMemo(() => {
+    if (!menuSearch) return cafeteriaMenu;
+    const s = menuSearch.toLowerCase();
+    return cafeteriaMenu.filter(item => item.name.toLowerCase().includes(s));
+  }, [menuSearch]);
+
+  if (collapsed) {
+    return (
+      <div className="w-14 h-full flex flex-col items-center bg-sidebar-bg text-sidebar-fg border-r border-sidebar-muted py-3 gap-2">
+        <button onClick={onToggleCollapse} className="p-2 rounded-md hover:bg-sidebar-muted transition-colors" title="Expand sidebar">
+          <PanelLeftOpen className="w-5 h-5" />
+        </button>
+        <button onClick={onOpenGuide} className="p-2 rounded-md hover:bg-sidebar-muted transition-colors" title="User Guide">
+          <HelpCircle className="w-5 h-5" />
+        </button>
+        <div className="w-8 border-t border-sidebar-muted my-1" />
+        {(Object.keys(categoryConfig) as FacilityCategory[]).map(cat => {
+          const config = categoryConfig[cat];
+          const Icon = config.icon;
+          return (
+            <button key={cat} onClick={() => { onToggleCollapse(); setExpandedCat(cat); }} className="p-2 rounded-md hover:bg-sidebar-muted transition-colors" title={config.label}>
+              <Icon className="w-4 h-4" />
+            </button>
+          );
+        })}
+      </div>
+    );
+  }
+
   return (
     <div className="w-80 h-full flex flex-col bg-sidebar-bg text-sidebar-fg overflow-hidden">
       {/* Header */}
       <div className="p-4 border-b border-sidebar-muted">
         <div className="flex items-center justify-between mb-3">
           <h1 className="text-lg font-bold tracking-tight">🗺️ Campus Navigator</h1>
-          <button onClick={onOpenGuide} className="p-1.5 rounded-md hover:bg-sidebar-muted transition-colors" title="User Guide">
-            <HelpCircle className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-1">
+            <button onClick={onOpenGuide} className="p-1.5 rounded-md hover:bg-sidebar-muted transition-colors" title="User Guide">
+              <HelpCircle className="w-5 h-5" />
+            </button>
+            <button onClick={onToggleCollapse} className="p-1.5 rounded-md hover:bg-sidebar-muted transition-colors" title="Collapse sidebar">
+              <PanelLeftClose className="w-5 h-5" />
+            </button>
+          </div>
         </div>
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -215,25 +252,45 @@ export default function Sidebar({ facilities, onSelectFacility, onOpenGuide }: S
                         {showMenu ? '▾ Hide Menu' : '▸ View Food Menu'}
                       </button>
                       {showMenu && (
-                        <div className="max-h-60 overflow-y-auto sidebar-scroll mt-1">
-                          <table className="w-full text-xs">
-                            <thead>
-                              <tr className="border-b border-sidebar-bg">
-                                <th className="text-left py-1 px-1">#</th>
-                                <th className="text-left py-1 px-1">Item</th>
-                                <th className="text-right py-1 px-1">KES</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {cafeteriaMenu.map(item => (
-                                <tr key={item.code} className="border-b border-sidebar-bg/50 hover:bg-sidebar-bg/50">
-                                  <td className="py-0.5 px-1 text-muted-foreground">{item.code}</td>
-                                  <td className="py-0.5 px-1">{item.name}</td>
-                                  <td className="py-0.5 px-1 text-right font-medium">{item.price}/-</td>
+                        <div className="mt-1">
+                          <div className="relative mb-2">
+                            <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground" />
+                            <input
+                              type="text"
+                              placeholder="Search meal..."
+                              value={menuSearch}
+                              onChange={e => setMenuSearch(e.target.value)}
+                              className="w-full pl-7 pr-6 py-1 rounded bg-sidebar-bg text-sidebar-fg placeholder:text-muted-foreground text-xs outline-none focus:ring-1 focus:ring-sidebar-accent"
+                            />
+                            {menuSearch && (
+                              <button onClick={() => setMenuSearch('')} className="absolute right-1.5 top-1/2 -translate-y-1/2">
+                                <X className="w-3 h-3 text-muted-foreground" />
+                              </button>
+                            )}
+                          </div>
+                          <div className="max-h-60 overflow-y-auto sidebar-scroll">
+                            <table className="w-full text-xs">
+                              <thead>
+                                <tr className="border-b border-sidebar-bg">
+                                  <th className="text-left py-1 px-1">#</th>
+                                  <th className="text-left py-1 px-1">Item</th>
+                                  <th className="text-right py-1 px-1">KES</th>
                                 </tr>
-                              ))}
-                            </tbody>
-                          </table>
+                              </thead>
+                              <tbody>
+                                {filteredMenu.map(item => (
+                                  <tr key={item.code} className="border-b border-sidebar-bg/50 hover:bg-sidebar-bg/50">
+                                    <td className="py-0.5 px-1 text-muted-foreground">{item.code}</td>
+                                    <td className="py-0.5 px-1">{item.name}</td>
+                                    <td className="py-0.5 px-1 text-right font-medium">{item.price}/-</td>
+                                  </tr>
+                                ))}
+                                {filteredMenu.length === 0 && (
+                                  <tr><td colSpan={3} className="py-2 text-center text-muted-foreground">No meals found</td></tr>
+                                )}
+                              </tbody>
+                            </table>
+                          </div>
                         </div>
                       )}
                     </div>

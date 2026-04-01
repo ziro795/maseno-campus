@@ -9,6 +9,7 @@ export default function Index() {
   const { facilities, loading } = useGeoData();
   const [selected, setSelected] = useState<FacilityFeature | null>(null);
   const [guideOpen, setGuideOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   const handleSelect = useCallback((f: FacilityFeature) => setSelected(f), []);
 
@@ -25,7 +26,7 @@ export default function Index() {
 
   return (
     <div className="h-screen flex overflow-hidden">
-      <Sidebar facilities={facilities} onSelectFacility={handleSelect} onOpenGuide={() => setGuideOpen(true)} />
+      <Sidebar facilities={facilities} onSelectFacility={handleSelect} onOpenGuide={() => setGuideOpen(true)} collapsed={sidebarCollapsed} onToggleCollapse={() => setSidebarCollapsed(p => !p)} />
       <MapViewComponent facilities={facilities} selectedFacility={selected} onSelectFacility={handleSelect} />
       <UserGuide open={guideOpen} onClose={() => setGuideOpen(false)} />
     </div>
