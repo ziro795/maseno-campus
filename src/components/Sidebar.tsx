@@ -98,15 +98,49 @@ export default function Sidebar({ facilities, onSelectFacility, onOpenGuide, col
 
   const toggle = (cat: FacilityCategory) => setExpandedCat(prev => prev === cat ? null : cat);
 
+  const filteredMenu = useMemo(() => {
+    if (!menuSearch) return cafeteriaMenu;
+    const s = menuSearch.toLowerCase();
+    return cafeteriaMenu.filter(item => item.name.toLowerCase().includes(s));
+  }, [menuSearch]);
+
+  if (collapsed) {
+    return (
+      <div className="w-14 h-full flex flex-col items-center bg-sidebar-bg text-sidebar-fg border-r border-sidebar-muted py-3 gap-2">
+        <button onClick={onToggleCollapse} className="p-2 rounded-md hover:bg-sidebar-muted transition-colors" title="Expand sidebar">
+          <PanelLeftOpen className="w-5 h-5" />
+        </button>
+        <button onClick={onOpenGuide} className="p-2 rounded-md hover:bg-sidebar-muted transition-colors" title="User Guide">
+          <HelpCircle className="w-5 h-5" />
+        </button>
+        <div className="w-8 border-t border-sidebar-muted my-1" />
+        {(Object.keys(categoryConfig) as FacilityCategory[]).map(cat => {
+          const config = categoryConfig[cat];
+          const Icon = config.icon;
+          return (
+            <button key={cat} onClick={() => { onToggleCollapse(); setExpandedCat(cat); }} className="p-2 rounded-md hover:bg-sidebar-muted transition-colors" title={config.label}>
+              <Icon className="w-4 h-4" />
+            </button>
+          );
+        })}
+      </div>
+    );
+  }
+
   return (
     <div className="w-80 h-full flex flex-col bg-sidebar-bg text-sidebar-fg overflow-hidden">
       {/* Header */}
       <div className="p-4 border-b border-sidebar-muted">
         <div className="flex items-center justify-between mb-3">
           <h1 className="text-lg font-bold tracking-tight">🗺️ Campus Navigator</h1>
-          <button onClick={onOpenGuide} className="p-1.5 rounded-md hover:bg-sidebar-muted transition-colors" title="User Guide">
-            <HelpCircle className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-1">
+            <button onClick={onOpenGuide} className="p-1.5 rounded-md hover:bg-sidebar-muted transition-colors" title="User Guide">
+              <HelpCircle className="w-5 h-5" />
+            </button>
+            <button onClick={onToggleCollapse} className="p-1.5 rounded-md hover:bg-sidebar-muted transition-colors" title="Collapse sidebar">
+              <PanelLeftClose className="w-5 h-5" />
+            </button>
+          </div>
         </div>
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
