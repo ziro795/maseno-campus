@@ -7,6 +7,8 @@ interface SidebarProps {
   facilities: FacilityFeature[];
   onSelectFacility: (f: FacilityFeature) => void;
   onOpenGuide: () => void;
+  collapsed: boolean;
+  onToggleCollapse: () => void;
 }
 
 const categoryConfig: Record<FacilityCategory, { label: string; icon: any; colorClass: string }> = {
