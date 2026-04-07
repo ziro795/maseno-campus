@@ -18,7 +18,7 @@ const modes: { value: TravelMode; icon: any; label: string }[] = [
 
 export default function RoutingPanel({ destination, mode, onModeChange, distance, duration, onClose }: RoutingPanelProps) {
   return (
-    <div className="absolute top-4 left-[336px] z-[1000] bg-card rounded-xl shadow-xl p-4 w-72 animate-fade-in">
+    <div className="absolute bottom-20 left-4 right-4 sm:left-auto sm:right-4 sm:bottom-auto sm:top-4 sm:w-72 z-[1000] bg-card rounded-xl shadow-xl p-4 animate-fade-in">
       <div className="flex items-center justify-between mb-3">
         <h3 className="font-semibold text-sm text-foreground">Directions</h3>
         <button onClick={onClose} className="p-1 hover:bg-muted rounded-md transition-colors">
