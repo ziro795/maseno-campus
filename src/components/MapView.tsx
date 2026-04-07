@@ -211,14 +211,24 @@ export default function MapViewComponent({ facilities, selectedFacility, onSelec
 
   const startRouting = useCallback((dest: FacilityFeature, mode: TravelMode) => {
     if (!mapRef.current) return;
+
+    // Require user location first
+    if (!userPosRef.current) {
+      alert('Please get your location first by clicking the locate button (bottom-right).');
+      return;
+    }
+
+    // Close any open popup
+    mapRef.current.closePopup();
+
+    // Remove existing route
     if (routingRef.current) {
       mapRef.current.removeControl(routingRef.current);
       routingRef.current = null;
     }
     clearRouteMarkers();
 
-    const start = userPosRef.current || [-0.004, 34.606] as [number, number];
-    const profile = mode === 'driving' ? 'car' : mode === 'walking' ? 'foot' : 'bike';
+    const start = userPosRef.current;
 
     // Add start marker
     const startMarker = L.marker(start, {
@@ -228,10 +238,11 @@ export default function MapViewComponent({ facilities, selectedFacility, onSelec
         iconSize: [28, 28],
         iconAnchor: [14, 14],
       })
-    }).addTo(mapRef.current).bindPopup('📍 Start');
+    }).addTo(mapRef.current).bindPopup('📍 You are here');
 
     // Add destination marker
-    const destMarker = L.marker(dest._center, {
+    const destLatLng = L.latLng(dest._center[0], dest._center[1]);
+    const destMarker = L.marker(destLatLng, {
       icon: L.divIcon({
         className: '',
         html: `<div style="width:28px;height:28px;border-radius:50%;background:${categoryColors[dest._category]};border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;color:white;font-size:12px;font-weight:bold">B</div>`,
@@ -242,9 +253,16 @@ export default function MapViewComponent({ facilities, selectedFacility, onSelec
 
     routeMarkersRef.current = [startMarker, destMarker];
 
+    // Speed factors for estimated walking/cycling times (OSRM only supports driving)
+    const speedFactors: Record<TravelMode, number> = {
+      driving: 1,
+      walking: 5.5,   // driving is ~5.5x faster than walking
+      cycling: 2.5,   // driving is ~2.5x faster than cycling
+    };
+
     const control = (L as any).Routing.control({
-      waypoints: [L.latLng(start[0], start[1]), L.latLng(dest._center[0], dest._center[1])],
-      router: (L as any).Routing.osrmv1({ serviceUrl: 'https://router.project-osrm.org/route/v1', profile }),
+      waypoints: [L.latLng(start[0], start[1]), destLatLng],
+      router: (L as any).Routing.osrmv1({ serviceUrl: 'https://router.project-osrm.org/route/v1' }),
       lineOptions: { styles: [{ color: categoryColors[dest._category], weight: 6, opacity: 0.8 }] },
       show: false,
       addWaypoints: false,
@@ -257,9 +275,10 @@ export default function MapViewComponent({ facilities, selectedFacility, onSelec
     control.on('routesfound', (e: any) => {
       const route = e.routes[0];
       const dist = route.summary.totalDistance;
-      const time = route.summary.totalTime;
+      const drivingTime = route.summary.totalTime;
+      const adjustedTime = drivingTime * speedFactors[mode];
       const distStr = dist > 1000 ? `${(dist / 1000).toFixed(2)} km` : `${Math.round(dist)} m`;
-      const mins = Math.round(time / 60);
+      const mins = Math.round(adjustedTime / 60);
       const durStr = mins > 60 ? `${Math.floor(mins / 60)}h ${mins % 60}m` : `${mins} min`;
       setRouting({ dest, mode, distance: distStr, duration: durStr });
     });
@@ -270,6 +289,9 @@ export default function MapViewComponent({ facilities, selectedFacility, onSelec
 
     routingRef.current = control;
     setRouting({ dest, mode, distance: '...', duration: '...' });
+
+    // Zoom to destination
+    mapRef.current.setView(dest._center, 18);
   }, []);
 
   const locateUser = () => {
