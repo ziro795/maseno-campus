@@ -202,15 +202,45 @@ export default function MapViewComponent({ facilities, selectedFacility, onSelec
     return () => { delete (window as any).__navigateTo; };
   }, [facilities]);
 
+  const routeMarkersRef = useRef<L.Marker[]>([]);
+
+  const clearRouteMarkers = () => {
+    routeMarkersRef.current.forEach(m => { if (mapRef.current) mapRef.current.removeLayer(m); });
+    routeMarkersRef.current = [];
+  };
+
   const startRouting = useCallback((dest: FacilityFeature, mode: TravelMode) => {
     if (!mapRef.current) return;
     if (routingRef.current) {
       mapRef.current.removeControl(routingRef.current);
       routingRef.current = null;
     }
+    clearRouteMarkers();
 
     const start = userPosRef.current || [-0.004, 34.606] as [number, number];
     const profile = mode === 'driving' ? 'car' : mode === 'walking' ? 'foot' : 'bike';
+
+    // Add start marker
+    const startMarker = L.marker(start, {
+      icon: L.divIcon({
+        className: '',
+        html: `<div style="width:28px;height:28px;border-radius:50%;background:#2c3e50;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;color:white;font-size:12px;font-weight:bold">A</div>`,
+        iconSize: [28, 28],
+        iconAnchor: [14, 14],
+      })
+    }).addTo(mapRef.current).bindPopup('📍 Start');
+
+    // Add destination marker
+    const destMarker = L.marker(dest._center, {
+      icon: L.divIcon({
+        className: '',
+        html: `<div style="width:28px;height:28px;border-radius:50%;background:${categoryColors[dest._category]};border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;color:white;font-size:12px;font-weight:bold">B</div>`,
+        iconSize: [28, 28],
+        iconAnchor: [14, 14],
+      })
+    }).addTo(mapRef.current).bindPopup(`🏁 ${dest._name}`);
+
+    routeMarkersRef.current = [startMarker, destMarker];
 
     const control = (L as any).Routing.control({
       waypoints: [L.latLng(start[0], start[1]), L.latLng(dest._center[0], dest._center[1])],
@@ -232,6 +262,10 @@ export default function MapViewComponent({ facilities, selectedFacility, onSelec
       const mins = Math.round(time / 60);
       const durStr = mins > 60 ? `${Math.floor(mins / 60)}h ${mins % 60}m` : `${mins} min`;
       setRouting({ dest, mode, distance: distStr, duration: durStr });
+    });
+
+    control.on('routingerror', () => {
+      setRouting({ dest, mode, distance: 'N/A', duration: 'N/A' });
     });
 
     routingRef.current = control;
@@ -277,6 +311,7 @@ export default function MapViewComponent({ facilities, selectedFacility, onSelec
       mapRef.current.removeControl(routingRef.current);
       routingRef.current = null;
     }
+    clearRouteMarkers();
     setRouting(null);
   };
 
